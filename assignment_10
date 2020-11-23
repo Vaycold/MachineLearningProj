@@ -1,0 +1,198 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "Untitled12.ipynb",
+      "provenance": [],
+      "authorship_tag": "ABX9TyNmBDRKfbugWT7m1gNZd0fm",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/moch1996/MachineLearningProj/blob/master/assignment_10\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jEcbnxsOdui8"
+      },
+      "source": [
+        "#모듈\n",
+        "import numpy as np\n",
+        "import matplotlib.pyplot as plt\n",
+        "\n",
+        "import torch \n",
+        "import torch.nn as nn\n",
+        "import torch.nn.functional as F\n",
+        "import torch.optim as optim\n",
+        "from torch.autograd import Variable\n",
+        "from torchvision import datasets, transforms"
+      ],
+      "execution_count": 1,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HLZjYHmqd0ei"
+      },
+      "source": [
+        "device = 'cuda:0' if torch.cuda.is_available() else 'cpu'"
+      ],
+      "execution_count": 4,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "U66rO44od8Uo"
+      },
+      "source": [
+        "transform1 = transforms.Compose([\n",
+        "    transforms.ToTensor(),\n",
+        "    transforms.Normalize((0.1307,),(0.3081,)),  # mean value = 0.1307, standard deviation value = 0.3081\n",
+        "])\n",
+        "batch_size = 64"
+      ],
+      "execution_count": 12,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ug1FgO-8eBXz"
+      },
+      "source": [
+        "#MNIST DATA\n",
+        "data_train = datasets.MNIST(root = 'MNIST_data',\n",
+        "                             download=True,\n",
+        "                             train=False,\n",
+        "                             transform=transform1\n",
+        "                             )\n",
+        "data_test = datasets.MNIST(root = 'MNIST_data', \n",
+        "                             train= True, \n",
+        "                             download=True, \n",
+        "                             transform= transform1)"
+      ],
+      "execution_count": 9,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "2CsXiFSyeHoo",
+        "outputId": "faa592ed-9e53-45ae-9f15-ec0776a0309c"
+      },
+      "source": [
+        "print(\"the number of your training data (must be 10,000) = \", data_train.__len__())\n",
+        "print(\"hte number of your testing data (must be 60,000) = \", data_test.__len__())\n"
+      ],
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "the number of your training data (must be 10,000) =  10000\n",
+            "hte number of your testing data (must be 60,000) =  60000\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "BglbOirJeOAu"
+      },
+      "source": [
+        "train_loader = torch.utils.data.DataLoader(dataset = training_set,\n",
+        "                                          batch_size=batch_size,\n",
+        "                                          shuffle = True,\n",
+        "                                          drop_last = True)\n",
+        "test_loader = torch.utils.data.DataLoader(dataset = testing_set,\n",
+        "                                          batch_size=batch_size,\n",
+        "                                          shuffle = True,\n",
+        "                                          drop_last = True)"
+      ],
+      "execution_count": 13,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "iZby-kYleaU1"
+      },
+      "source": [
+        "class classification(nn.Module):\n",
+        "    def __init__(self):\n",
+        "        super(classification, self).__init__()\n",
+        "        \n",
+        "        # construct layers for a neural network\n",
+        "        self.classifier1 = nn.Sequential(\n",
+        "            nn.Linear(in_features=28*28, out_features=20*20),\n",
+        "            nn.BatchNorm1d(400),\n",
+        "            nn.ReLU(),\n",
+        "        ) \n",
+        "        self.classifier2 = nn.Sequential(\n",
+        "            nn.Linear(in_features=20*20, out_features=10*10),\n",
+        "            nn.BatchNorm1d(100),\n",
+        "            nn.ReLU(),\n",
+        "        ) \n",
+        "        self.classifier3 = nn.Sequential(\n",
+        "            nn.Linear(in_features=10*10, out_features=10),\n",
+        "            nn.LogSoftmax(dim=1),\n",
+        "        ) \n",
+        "        \n",
+        "        \n",
+        "    def forward(self, inputs):                 # [batchSize, 1, 28, 28]\n",
+        "        x = inputs.view(inputs.size(0), -1)    # [batchSize, 28*28]\n",
+        "        x = self.classifier1(x)                # [batchSize, 20*20]\n",
+        "        x = self.classifier2(x)                # [batchSize, 10*10]\n",
+        "        out = self.classifier3(x)              # [batchSize, 10]\n",
+        "        \n",
+        "        return out"
+      ],
+      "execution_count": 15,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "wRAkiA8yiA58"
+      },
+      "source": [
+        "model = classification().to(device)\n",
+        "loss = "
+      ],
+      "execution_count": 16,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jNzjOJyMiLzq"
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
